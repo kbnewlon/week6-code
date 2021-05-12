@@ -16,8 +16,10 @@ export default class Journal extends React.Component {
 
 
         db.collection('journalEntries')
-            .onSnapshot((doc) => {
-                console.log(doc)
+            .onSnapshot((data) => {
+                data.docs.forEach(doc => {
+                    console.log(doc.id, doc.data());
+                })
             })
     }
 
