@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import firebase from 'firebase';
 import AddJournalEntry from './AddJournalEntry';
 import DeleteButton from './DeleteButton';
 import db from '../firebase/db';
@@ -10,38 +11,54 @@ export default class Journal extends React.Component {
     }
 
     componentDidMount() {
-        // db.collection('journalEntries')
-        //     .get()
-        //     .then((querySnapshot) => {
-        //         querySnapshot.forEach((doc) => {
-        //             console.log(`${doc.id} => ${JSON.stringify(doc.data())}`);
-        //         });
-        //     });
+        // const user = firebase.auth().currentUser;
+        // console.log(user);
+        this.unregisterAuthObserver = firebase
+            .auth()
+            .onAuthStateChanged(user => {
+                if (!user) {
+                    alert('You need to be signed in to access the journal');
+                    this.props.history.push('/');
+                    return;
+                }
 
-        this.unsubscribe = db.collection('journalEntries')
-            .orderBy('createdAt', 'asc')
-            .onSnapshot((data) => {
-                // console.log(data.docs);
-                // data.docs.forEach(doc => {
-                //     console.log(doc.id, doc.data());
-                // });
-                const journalEntries = data.docs.map(doc => {
-                    return {
-                        id: doc.id,
-                        ...doc.data()
-                    };
-                });
-
-                this.setState({
-                    journalEntries
-                })
+                const userId = user.uid;
+                this.unsubscribe = db
+                    .collection('users')
+                    .doc(userId)
+                    .collection('journalEntries')
+                    .orderBy('createdAt', 'asc')
+                    .onSnapshot((data) => {
+                        const journalEntries = data.docs.map(doc => {
+                            return {
+                                id: doc.id,
+                                ...doc.data()
+                            };
+                        });
+        
+                        this.setState({
+                            journalEntries
+                        })
+                    });
             });
+
     }
 
     componentWillUnmount() {
         if (this.unsubscribe) {
             this.unsubscribe();
         }
+
+        if (this.unregisterAuthObserver) {
+            this.unregisterAuthObserver();
+        }
+    }
+
+    signOut = () => {
+        firebase.auth().signOut().then(() => {
+            alert('Signed out!');
+            this.props.history.push('/');
+        });
     }
 
     render() {
@@ -64,19 +81,9 @@ export default class Journal extends React.Component {
                 <ul>
                     {journalEntries}
                 </ul>
+                <hr />
+                <button onClick={this.signOut}>Sign Out</button>
             </div>
         )
     }
 }
-
-// function Journal {
-//     useEffect(() => {
-//         // Firestore code here
-
-//         return () => {
-//             unsubscribe();
-//         }
-//     });
-
-//     return ...
-// }
